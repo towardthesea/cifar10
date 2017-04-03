@@ -51,7 +51,7 @@ import cifar10
 
 FLAGS = tf.app.flags.FLAGS
 
-tf.app.flags.DEFINE_string('train_dir', '/tmp/cifar10_train',
+tf.app.flags.DEFINE_string('train_dir', 'log/cifar10_train_mutli',
                            """Directory where to write event logs """
                            """and checkpoint.""")
 tf.app.flags.DEFINE_integer('max_steps', 1000000,
@@ -207,6 +207,13 @@ def train():
         cifar10.MOVING_AVERAGE_DECAY, global_step)
     variables_averages_op = variable_averages.apply(tf.trainable_variables())
 
+    # # Read the old checkpoint to resume training if possible
+    ckpt = tf.train.get_checkpoint_state(FLAGS.train_dir)
+    prev_step = -1
+    if ckpt and ckpt.model_checkpoint_path:
+      prev_step = int(ckpt.model_checkpoint_path.split('/')[-1].split('-')[-1])
+      print('prev_step %d' % prev_step)
+
     # Group all updates to into a single train op.
     train_op = tf.group(apply_gradient_op, variables_averages_op)
 
@@ -231,6 +238,8 @@ def train():
     tf.train.start_queue_runners(sess=sess)
 
     summary_writer = tf.summary.FileWriter(FLAGS.train_dir, sess.graph)
+
+    step = prev_step
 
     for step in xrange(FLAGS.max_steps):
       start_time = time.time()
